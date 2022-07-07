@@ -1,6 +1,6 @@
 package com.example.messagingstompwebsocket;
 
-public class HelloMessage {
+public class HelloMessage implements Message {
 
 	private String name;
 

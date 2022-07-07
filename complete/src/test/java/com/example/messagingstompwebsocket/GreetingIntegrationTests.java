@@ -1,34 +1,30 @@
 package com.example.messagingstompwebsocket;
 
-import static org.junit.jupiter.api.Assertions.*;
+import org.jetbrains.annotations.NotNull;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.converter.SmartMessageConverter;
+import org.springframework.messaging.simp.stomp.*;
+import org.springframework.web.socket.WebSocketHttpHeaders;
+import org.springframework.web.socket.client.WebSocketClient;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.messaging.WebSocketStompClient;
+import org.springframework.web.socket.sockjs.client.SockJsClient;
+import org.springframework.web.socket.sockjs.client.Transport;
+import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.messaging.converter.MappingJackson2MessageConverter;
-import org.springframework.messaging.simp.stomp.StompCommand;
-import org.springframework.messaging.simp.stomp.StompFrameHandler;
-import org.springframework.messaging.simp.stomp.StompHeaders;
-import org.springframework.messaging.simp.stomp.StompSession;
-import org.springframework.messaging.simp.stomp.StompSessionHandler;
-import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
-import org.springframework.web.socket.WebSocketHttpHeaders;
-import org.springframework.web.socket.client.standard.StandardWebSocketClient;
-import org.springframework.web.socket.messaging.WebSocketStompClient;
-import org.springframework.web.socket.sockjs.client.SockJsClient;
-import org.springframework.web.socket.sockjs.client.Transport;
-import org.springframework.web.socket.sockjs.client.WebSocketTransport;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class GreetingIntegrationTests {
@@ -43,11 +39,14 @@ class GreetingIntegrationTests {
 	@BeforeEach
 	public void setup() {
 		final List<Transport> transports = new CopyOnWriteArrayList<>();
-		transports.add(new WebSocketTransport(new StandardWebSocketClient()));
-		SockJsClient sockJsClient = new SockJsClient(transports);
+		final WebSocketClient webSocketClient = new StandardWebSocketClient();
+		final Transport webSocketTransport = new WebSocketTransport(webSocketClient);
+		transports.add(webSocketTransport);
+		final WebSocketClient sockJsClient = new SockJsClient(transports);
 
 		this.stompClient = new WebSocketStompClient(sockJsClient);
-		this.stompClient.setMessageConverter(new MappingJackson2MessageConverter());
+		final SmartMessageConverter messageConverter = new MappingJackson2MessageConverter();
+		this.stompClient.setMessageConverter(messageConverter);
 	}
 
 	@Test
@@ -56,6 +55,7 @@ class GreetingIntegrationTests {
 		final CountDownLatch latch = new CountDownLatch(1);
 		final AtomicReference<Throwable> failure = new AtomicReference<>();
 
+		// StompSessionHandler type is declared since method .connect() is used
 		final StompSessionHandler handler = new TestSessionHandler(failure) {
 
 			@Override
@@ -68,7 +68,7 @@ class GreetingIntegrationTests {
 
 					@Override
 					public void handleFrame(@NotNull StompHeaders headers, Object payload) {
-						Greeting greeting = (Greeting) payload;
+						final Greeting<String> greeting = (Greeting<String>) payload;
 						try {
 							assertEquals("Hello, Spring!", greeting.getContent());
 						} catch (Throwable t) {

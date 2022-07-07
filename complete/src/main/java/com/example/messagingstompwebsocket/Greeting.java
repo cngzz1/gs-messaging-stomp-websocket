@@ -1,17 +1,17 @@
 package com.example.messagingstompwebsocket;
 
-public class Greeting {
+public class Greeting<E> {
 
-	private String content;
+	private E content;
 
 	public Greeting() {
 	}
 
-	public Greeting(String content) {
+	public Greeting(E content) {
 		this.content = content;
 	}
 
-	public String getContent() {
+	public E getContent() {
 		return content;
 	}
 
