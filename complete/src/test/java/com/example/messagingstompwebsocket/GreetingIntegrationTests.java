@@ -5,10 +5,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -29,12 +31,10 @@ import org.springframework.web.socket.sockjs.client.Transport;
 import org.springframework.web.socket.sockjs.client.WebSocketTransport;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class GreetingIntegrationTests {
+class GreetingIntegrationTests {
 
 	@LocalServerPort
 	private int port;
-
-	private SockJsClient sockJsClient;
 
 	private WebSocketStompClient stompClient;
 
@@ -42,32 +42,32 @@ public class GreetingIntegrationTests {
 
 	@BeforeEach
 	public void setup() {
-		List<Transport> transports = new ArrayList<>();
+		final List<Transport> transports = new CopyOnWriteArrayList<>();
 		transports.add(new WebSocketTransport(new StandardWebSocketClient()));
-		this.sockJsClient = new SockJsClient(transports);
+		SockJsClient sockJsClient = new SockJsClient(transports);
 
 		this.stompClient = new WebSocketStompClient(sockJsClient);
 		this.stompClient.setMessageConverter(new MappingJackson2MessageConverter());
 	}
 
 	@Test
-	public void getGreeting() throws Exception {
+	void getGreeting() throws Exception {
 
 		final CountDownLatch latch = new CountDownLatch(1);
 		final AtomicReference<Throwable> failure = new AtomicReference<>();
 
-		StompSessionHandler handler = new TestSessionHandler(failure) {
+		final StompSessionHandler handler = new TestSessionHandler(failure) {
 
 			@Override
-			public void afterConnected(final StompSession session, StompHeaders connectedHeaders) {
+			public void afterConnected(final @NotNull StompSession session, @NotNull StompHeaders connectedHeaders) {
 				session.subscribe("/topic/greetings", new StompFrameHandler() {
 					@Override
-					public Type getPayloadType(StompHeaders headers) {
+					public @NotNull Type getPayloadType(@NotNull StompHeaders headers) {
 						return Greeting.class;
 					}
 
 					@Override
-					public void handleFrame(StompHeaders headers, Object payload) {
+					public void handleFrame(@NotNull StompHeaders headers, Object payload) {
 						Greeting greeting = (Greeting) payload;
 						try {
 							assertEquals("Hello, Spring!", greeting.getContent());
@@ -101,7 +101,7 @@ public class GreetingIntegrationTests {
 
 	}
 
-	private class TestSessionHandler extends StompSessionHandlerAdapter {
+	private static class TestSessionHandler extends StompSessionHandlerAdapter {
 
 		private final AtomicReference<Throwable> failure;
 
@@ -110,17 +110,17 @@ public class GreetingIntegrationTests {
 		}
 
 		@Override
-		public void handleFrame(StompHeaders headers, Object payload) {
+		public void handleFrame(@NotNull StompHeaders headers, Object payload) {
 			this.failure.set(new Exception(headers.toString()));
 		}
 
 		@Override
-		public void handleException(StompSession s, StompCommand c, StompHeaders h, byte[] p, Throwable ex) {
+		public void handleException(@NotNull StompSession s, StompCommand c, @NotNull StompHeaders h, byte @NotNull [] p, @NotNull Throwable ex) {
 			this.failure.set(ex);
 		}
 
 		@Override
-		public void handleTransportError(StompSession session, Throwable ex) {
+		public void handleTransportError(@NotNull StompSession session, @NotNull Throwable ex) {
 			this.failure.set(ex);
 		}
 	}
